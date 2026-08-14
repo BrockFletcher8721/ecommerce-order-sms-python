@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecommerce-order-sms"
+version = "0.1.0"
+description = "Typed order transitions delivered as transactional SMS alerts"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[tool.setuptools]
+py-modules = ["infrai_sms", "order_alerts", "send_order_update"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

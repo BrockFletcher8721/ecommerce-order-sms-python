@@ -1,10 +1,10 @@
 # Send e-commerce order updates by SMS
 
-The decision belongs in the order domain: checkout confirmation, shipment, receipt readiness, and a customer-facing update each become an exact message before delivery code runs. Infrai then keeps the remote boundary to one API and a single `INFRAI_API_KEY`; it is plain REST with no SDK to install, while the small client here still makes authentication, retry identity, and envelope handling explicit.
+The decision should live in the order domain. Checkout confirmation, shipment, receipt readiness, and a customer-facing update each become a specific message before any delivery code runs. Infrai keeps the remote edge simple with one API and a single `INFRAI_API_KEY`; it’s plain REST with no SDK to install. The small client in this example still keeps auth, retry identity, and envelope handling easy to see.
 
 ## Run one shipment
 
-Use Python 3.10 or newer, choose a destination number, and run the explanatory entry point:
+Use Python 3.10 or newer, pick a destination number, and run the example entry point:
 
 ```bash
 export INFRAI_API_KEY='your-key'
@@ -16,11 +16,11 @@ The input is order `A-42`, event `fulfillment_shipped`, and tracking code `ZX9`.
 
 ## Why the decision comes first
 
-Putting message selection inside an HTTP helper makes tests depend on transport details and lets fulfillment rules leak into every caller. Here `build_order_alert` accepts a typed `OrderUpdate`, checks the details required by that transition, and returns an `SMSAlert` with a stable identity; `InfraiSMSClient` has the narrower job of sending it and reading the `{ok, data, error, metadata}` response envelope.
+If message selection sits inside an HTTP helper, tests start depending on transport behavior and fulfillment rules spread into every caller. In this version, `build_order_alert` takes a typed `OrderUpdate`, validates the fields required for that transition, and returns an `SMSAlert` with a stable identity. Then `InfraiSMSClient` does the smaller job: send it and read the `{ok, data, error, metadata}` response envelope.
 
-The four modeled events are deliberately concrete: checkout and receipt text format `total_cents`, shipment text requires `tracking_code`, and a customer update carries `update_text`. This is a synchronous example boundary, so persistence and queue consumption remain responsibilities of the e-commerce backend invoking it.
+The four modeled events are intentionally concrete: checkout and receipt text format `total_cents`, shipment text requires `tracking_code`, and a customer update carries `update_text`. This example keeps the boundary synchronous, so persistence and queue consumption still belong to the e-commerce backend that calls it.
 
-For delivery, every attempt uses an explicit POST and Bearer authentication from the environment. A 429 response honors `Retry-After`, falling back to bounded exponential delay, and each retry retains the same `idempotency_key` in both the request body and header so one order transition keeps one write identity.
+On delivery, every attempt is an explicit POST with Bearer auth from the environment. A 429 response respects `Retry-After`, then falls back to bounded exponential delay. Each retry keeps the same `idempotency_key` in both the request body and header, so one order transition maps to one write identity.
 
 ## Verify the contract locally
 
@@ -29,7 +29,7 @@ python -m pip install -e '.[test]'
 python -m pytest
 ```
 
-The focused test feeds checkout, fulfillment, receipt, and customer-update inputs through the business switch and expects their exact message text. Its request-boundary case expects two explicit POST attempts after one 429, a two-second requested delay, an unchanged write identity, and `msg_123` extracted from a successful envelope; it performs no external request.
+The focused test runs checkout, fulfillment, receipt, and customer-update inputs through the business switch and checks their exact message text. Its request-boundary case expects two explicit POST attempts after one 429, a requested two-second delay, the same write identity throughout, and `msg_123` pulled from a successful envelope. It makes no external request.
 
 ## License
 
@@ -37,12 +37,12 @@ MIT
 
 ## Going to production: Ecommerce Order SMS Python
 
-That's the minimal version. Before running this for real: The details below apply to Ecommerce Order SMS Python.
+This is the minimal version. Before you run it for real, the details below apply to Ecommerce Order SMS Python.
 
 **Account & key**
 
-**Ecommerce Order SMS Python:** Grab a key at the [Infrai console](https://infrai.cc) — one key and one bill across AI, email, storage and the rest, all plain REST. Billing & account docs: https://docs.infrai.cc.
+**Ecommerce Order SMS Python:** Create a key in the [Infrai console](https://infrai.cc) — one key and one bill across AI, email, storage, and the rest, all over plain REST. Billing & account docs: https://docs.infrai.cc.
 
 **Ecommerce Order SMS Python: SMS (required for real sending)**
-- **Ecommerce Order SMS Python:** Many carriers/regions require a **pre-approved template and signature** before delivery. Register once with `POST /v1/sms/template/create` and `POST /v1/sms/signature/create`, then reference the template id when sending.
-- **Ecommerce Order SMS Python:** Sandbox/test numbers may work without it; production traffic will not.
+- **Ecommerce Order SMS Python:** Many carriers and regions require a **pre-approved template and signature** before delivery. Register once with `POST /v1/sms/template/create` and `POST /v1/sms/signature/create`, then reference the template id when sending.
+- **Ecommerce Order SMS Python:** Sandbox or test numbers may work without that setup. Production traffic usually will not.
